@@ -4,6 +4,8 @@ use strict;
 use warnings FATAL => 'all';
 use English qw( OSNAME );
 
+use Net::IPv4Addr;
+
 our $VERSION = '0.01';
 
 if ($OSNAME eq 'linux' || $OSNAME eq 'freebsd') {
@@ -35,6 +37,7 @@ sub check_ip($$) {
 
 	my $output;
 	if ($OSNAME eq 'linux') {
+		# FIXME should we check default gateway?
 		$output = `/sbin/ip addr show dev $if`;
 		_exit_error("Could not check if ip $ip is configured on $if: $output") if ($? >> 8 == 255);
 	}
@@ -55,20 +58,31 @@ sub check_ip($$) {
 }
 
 
-=item add_ip($if, $ip)
+=item add_ip($if, $ip, $cidr, $dg)
 
 Add IP $ip to the interface $if.
 
 =cut
 
-sub add_ip($$) {
+sub add_ip($$$$) {
 	my $if = shift;
 	my $ip = shift;
+	my $cidr = shift;
+	my $dg = shift;
 
 	my $output;
 	if ($OSNAME eq 'linux') {
-		$output = `/sbin/ip addr add $ip/32 dev $if`;
-		_exit_error("Could not configure ip $ip on interface $if: $output") if ($? >> 8 == 255);
+		$cidr ||= 32;
+		
+		my $broadcast = Net::IPv4Addr::ipv4_broadcast("$ip/$cidr");
+		
+		$output = `/sbin/ip addr add $ip/$cidr brd $broadcast dev $if`;
+		_exit_error("Could not configure ip $ip/$cidr on interface $if: $output") if ($? >> 8 == 255);
+		
+		if ($dg) {
+			$output = `/sbin/ip route add default via $dg`;
+			_exit_error("Could not set default gateway to $dg: $output") if ($? >> 8 == 255);
+		}
 	}
 	elsif ($OSNAME eq 'solaris') {
 		$output = `/usr/sbin/ifconfig $if addif $ip`;
@@ -91,20 +105,29 @@ sub add_ip($$) {
 }
 
 
-=item clear_ip($if, $ip)
+=item clear_ip($if, $ip, $cidr, $dg)
 
 Remove the IP $ip from the interface $if.
 
 =cut
 
-sub clear_ip($$) {
+sub clear_ip($$$$) {
 	my $if = shift;
 	my $ip = shift;
+	my $cidr = shift;
+	my $dg = shift;
 
 	my $output;
 	if ($OSNAME eq 'linux') {
-		$output = `/sbin/ip addr del $ip/32 dev $if`;
-		_exit_error("Could not remove ip $ip from interface $if: $output") if ($? >> 8 == 255);
+		if ($dg) {
+			$output = `/sbin/ip route del default via $dg`;
+			_exit_error("Could not remove default gateway $dg: $output") if ($? >> 8 == 255);
+		}
+		
+		$cidr ||= 32;
+		
+		$output = `/sbin/ip addr del $ip/$cidr dev $if`;
+		_exit_error("Could not remove ip $ip/$cidr from interface $if: $output") if ($? >> 8 == 255);
 	}
 	elsif ($OSNAME eq 'solaris') {
 		$output = `/usr/sbin/ifconfig $if removeif $ip`;

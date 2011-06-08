@@ -43,6 +43,17 @@ sub _new_instance($) {
 		# Shutdown checker
 		$checker->shutdown();
 	}
+
+	# Init structure for ping_agent, it works without checker
+	my $agents = MMM::Monitor::Agents->instance();
+	foreach my $host_name (@hosts) {
+		my $agent = $agents->get($host_name);
+		$data->{$host_name}->{ping_agent} = {};
+		$data->{$host_name}->{ping_agent}->{status}      = $agent->agent_down() || 0;
+		$data->{$host_name}->{ping_agent}->{last_change} = $time;
+		$data->{$host_name}->{ping_agent}->{message}     = defined ($agent->agent_down()) ? $agent->agent_down() ? 'ERROR: agent is not reachable' : 'OK' : 'OK';
+	}
+	
 	return bless $data, $class; 
 }
 
@@ -114,6 +125,18 @@ sub rep_backlog($$) {
 	my $self = shift;
 	my $host = shift;
 	return $self->{$host}->{rep_backlog}->{status};
+}
+
+=item ping_agent($host)
+
+Get state of check "ping_agent" on host $host.
+
+=cut
+
+sub ping_agent($$) {
+	my $self = shift;
+	my $host = shift;
+	return $self->{$host}->{ping_agent}->{status};
 }
 
 

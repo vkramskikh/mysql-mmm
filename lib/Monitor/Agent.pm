@@ -4,6 +4,7 @@ use strict;
 use warnings FATAL => 'all';
 use Log::Log4perl qw(:easy);
 use MMM::Common::Socket;
+use MMM::Monitor::CheckResult;
 use MMM::Monitor::ChecksStatus;
 
 our $VERSION = '0.01';
@@ -29,8 +30,6 @@ struct 'MMM::Monitor::Agent' => {
 	flapping          => '$',
 	flapstart         => '$',
 	flapcount         => '$',
-
-	agent_down        => '$'
 };
 
 sub state {
@@ -163,6 +162,22 @@ sub cmd_clear_bad_roles($) {
 	my $self	= shift;
 	my $retries	= shift || 0;
 	return $self->_send_command_retry($retries, 'CLEAR_BAD_ROLES');
+}
+
+sub agent_down() {
+	my $self	= shift;
+	
+	if (scalar @_) {
+		my $value	= shift;
+		
+		$self->{'MMM::Monitor::Agent::agent_down'} = $value;
+		
+		my $checks = MMM::Monitor::ChecksStatus->instance();
+		my $result = new MMM::Monitor::CheckResult::($self->host, 'ping_agent', $value, $value ? 'ERROR: agent is not reachable' : 'OK');
+		$checks->handle_result($result);
+	}
+	
+	return $self->{'MMM::Monitor::Agent::agent_down'};
 }
 
 1;

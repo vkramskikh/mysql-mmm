@@ -37,22 +37,24 @@ sub check_ip($$) {
 }
 
 
-=item configure_ip($if, $ip)
+=item configure_ip($if, $ip, $cidr, $dg)
 
 Check if the IP $ip is configured on interface $if. If not, configure it and
 send arp requests to notify other hosts.
 
 =cut
 
-sub configure_ip($$) {
+sub configure_ip($$$$) {
 	my $if	= shift;
 	my $ip	= shift;
+	my $cidr = shift;
+	my $dg = shift;
 	
 	if (MMM::Agent::Helpers::Network::check_ip($if, $ip)) {
 		_exit_ok('IP address is configured');
 	}
 
-	if (!MMM::Agent::Helpers::Network::add_ip($if, $ip)) {
+	if (!MMM::Agent::Helpers::Network::add_ip($if, $ip, $cidr, $dg)) {
 		_exit_error("Could not configure ip adress $ip on interface $if!");
 	}
 	MMM::Agent::Helpers::Network::send_arp($if, $ip);
@@ -60,21 +62,23 @@ sub configure_ip($$) {
 }
 
 
-=item clear_ip($if, $ip)
+=item clear_ip($if, $ip, $cidr, $dg)
 
 Remove the IP address $ip from interface $if.
 
 =cut
 
-sub clear_ip($$) {
+sub clear_ip($$$$) {
 	my $if	= shift;
 	my $ip	= shift;
+	my $cidr = shift;
+	my $dg = shift;
 	
 	if (!MMM::Agent::Helpers::Network::check_ip($if, $ip)) {
 		_exit_ok('IP address is not configured');
 	}
 
-	MMM::Agent::Helpers::Network::clear_ip($if, $ip);
+	MMM::Agent::Helpers::Network::clear_ip($if, $ip, $cidr, $dg);
 	_exit_ok();
 }
 

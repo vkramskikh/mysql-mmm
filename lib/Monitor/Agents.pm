@@ -126,16 +126,22 @@ Get string containing status information.
 
 =cut
 
-sub get_status_info($) {
-	my $self	= shift;
-	my $detailed= shift || 0;
-	my $res		= '';
+sub get_status_info($;\%) {
+	my $self	 = shift;
+	my $detailed = shift || 0;
+	my $filters = shift || {};
+	my $res		 = '';
 	my $agent_res = '';
 
 	keys (%$self); # reset iterator
 	foreach my $host (sort(keys(%$self))) {
+		next if defined $filters->{host} && $filters->{host} ne $host;
+		
 		my $agent = $self->{$host};
 		next unless $agent;
+		
+		next if defined $filters->{mode} && $filters->{mode} ne $agent->mode;
+		
 		$agent_res	.= "# Warning: agent on host $host is not reachable\n" if ($agent->agent_down());
 		$res		.= sprintf("  %s(%s) %s/%s. Roles: %s\n", $host, $agent->ip, $agent->mode, $agent->state, join(', ', sort(@{$agent->roles})));
 	}

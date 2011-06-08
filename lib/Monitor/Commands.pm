@@ -55,7 +55,9 @@ sub ping() {
 }
 
 
-sub show() {
+sub show(;$$) {
+	my $filter = shift || '';
+	
 	my $agents	= MMM::Monitor::Agents->instance();
 	my $monitor	= MMM::Monitor::Monitor->instance();
 	my $roles	= MMM::Monitor::Roles->instance();
@@ -66,7 +68,22 @@ sub show() {
 		$ret .= sprintf("Cause: %s\n", $monitor->passive_info);
 		$ret =~ s/^/# /mg;
 	}
-	$ret .= $agents->get_status_info(1);
+	
+	if ($filter eq 'status') {
+		my $host = shift || '';
+		return "ERROR: No host specified" unless length $host;
+		
+		$ret .= $agents->get_status_info(1, {host => $host});
+	} elsif ($filter eq 'masters') {
+		$ret .= $agents->get_status_info(1, {mode => 'master'});
+	} elsif ($filter eq 'slaves') {
+		$ret .= $agents->get_status_info(1, {mode => 'slave'});
+	} elsif (length $filter) {
+		return "ERROR: Invalid argument for 'show'. Allowed arguments are: 'masters', 'slaves', 'status <host>'";
+	} else {
+		$ret .= $agents->get_status_info(1);
+	}
+	
 	$ret .= $roles->get_preference_info();
 	return $ret;
 }
@@ -80,7 +97,7 @@ sub checks {
 
 	my $dateformat = Log::Log4perl::DateFormat->new('yyyy/MM/dd HH:mm:ss');
 
-	my @valid_checks = qw(ping mysql rep_threads rep_backlog);
+	my @valid_checks = qw(ping ping_agent mysql rep_threads rep_backlog);
 	return "ERROR: Unknown check '$check'!" unless ($check eq 'all' || grep(/^$check$/, @valid_checks));
 
 	if ($host ne 'all') {
@@ -464,6 +481,9 @@ sub help() {
     help                              - show this message
     ping                              - ping monitor
     show                              - show status
+    show masters                      - show only masters status
+    show slaves                       - show only slaves status
+    show status <host>                - show specified host status
     checks [<host>|all [<check>|all]] - show checks status
     set_online <host>                 - set host <host> online
     set_offline <host>                - set host <host> offline

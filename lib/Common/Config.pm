@@ -22,8 +22,13 @@ our $RULESET = {
 	'role'					=> { 'required' => ['AGENT', 'MONITOR'], 'multiple' => 1, 'section' => {
 		'mode'					=> { 'required' => ['MONITOR'], 'values' => ['balanced', 'exclusive'] },
 		'hosts'					=> { 'required' => ['MONITOR'], 'refvalues' => 'host', 'multiple' => 1 },
-		'ips'					=> { 'required' => ['AGENT', 'MONITOR'], 'multiple' => 1 },
+		'ips'					=> { 'required' => ['AGENT', 'MONITOR'], 'refvalues' => 'ip', 'multiple' => 1 },
 		'prefer'				=> { 'refvalues' => 'hosts' }
+		}
+	},
+	'ip'					=> { 'required' => 1, 'multiple' => 1, 'template' => 'default', 'section' => {
+		'default_gateway'		=> { 'default' => '' },
+		'cidr'					=> { 'default' => 32 },
 		}
 	},
 	'monitor'				=> { 'required' => ['MONITOR', 'CONTROL'], 'section' => {
@@ -188,7 +193,7 @@ sub parse(\%\%$*) {
 			next;
 		}
 		# start tag - named section
-		if ($line =~/^\s*<\s*(\w+)\s+([\w\-_]+)\s*>\s*$/) {
+		if ($line =~/^\s*<\s*(\w+)\s+([\w\.\-_]+)\s*>\s*$/) {
 			my $type = $1;
 			my $name = $2;
 			if (!defined($ruleset->{$type}) || !defined($ruleset->{$type}->{section})) {
@@ -204,7 +209,7 @@ sub parse(\%\%$*) {
 		}
 
 		# empty tag - named section
-		if ($line =~/^\s*<\s*(\w+)\s+([\w\-_]+)\s*\/>\s*$/) {
+		if ($line =~/^\s*<\s*(\w+)\s+([\w\.\-_]+)\s*\/>\s*$/) {
 			my $type = $1;
 			my $name = $2;
 			if (!defined($ruleset->{$type}) || !defined($ruleset->{$type}->{section})) {

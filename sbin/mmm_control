@@ -36,7 +36,7 @@ die "See '$0 help' for usage information" if (scalar(@ARGV) < 1);
 my $socket = MMM::Common::Socket::create_sender($config->{monitor}->{ip}, $config->{monitor}->{port}, 10);
 unless ($socket && $socket->connected) {
 	print "ERROR: Can't connect to monitor daemon!\n";
-	exit(1);
+	exit(2);
 }
 
 print $socket join(' ', @ARGV), "\nquit\n";
@@ -44,6 +44,45 @@ my $res = '';
 my $line;
 $res .= $line while ($line = <$socket>);
 print $res, "\n";
+
+# strip comments
+$res =~ s/^#.*$//gm;
+$res =~ s/\n+/\n/g;
+
+if ($res =~ /ERROR/) {
+	exit(2);
+} elsif ($res =~ /UNKNOWN/) {
+	exit(3);
+}
+
+# specific exit codes for 'show' command
+if ($ARGV[0] eq 'show') {
+	if (defined $ARGV[1] && $ARGV[1] eq 'status') {
+		if ($res =~ /(HARD_OFFLINE|AWAITING_RECOVERY|REPLICATION_FAIL)/) {
+			exit(2);
+		} elsif ($res =~ /(ADMIN_OFFLINE|REPLICATION_DELAY)/) {
+			exit(1);
+		} elsif ($res =~ /ONLINE/) {
+			exit(0);
+		} else {
+			exit(3);
+		}
+	} else {
+		chomp $res;
+		my @res = split /\n/, $res;
+		
+		my $nodes_count = scalar @res;
+		my $online_count = scalar grep {/ONLINE/} @res;
+		
+		if ($nodes_count == $online_count) {
+			exit(0);
+		} elsif (($nodes_count - $online_count) == 1) {
+			exit(1);
+		} else {
+			exit(2);
+		}
+	}
+}
 
 exit(0);
 

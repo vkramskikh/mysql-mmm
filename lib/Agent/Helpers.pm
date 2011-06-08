@@ -33,7 +33,7 @@ sub check_ip($$) {
 }
 
 
-=item configure_ip($if, $ip)
+=item configure_ip($if, $ip, $cidr, $dg)
 
 Check if the IP $ip is configured on interface $if. If not, configure it and
 send arp requests to notify other hosts.
@@ -42,14 +42,17 @@ Calls B<bin/agent/configure_ip>.
 
 =cut
 
-sub configure_ip($$) {
+sub configure_ip($$$$) {
 	my $if = shift;
 	my $ip = shift;
-	return _execute('configure_ip', "$if $ip");
+	my $cidr = shift;
+	my $dg = shift;
+	
+	return _execute('configure_ip', "$if $ip/$cidr $dg");
 }
 
 
-=item clear_ip($if, $ip)
+=item clear_ip($if, $ip, $cidr, $dg)
 
 Remove the IP address $ip from interface $if.
 
@@ -57,10 +60,13 @@ Calls B<bin/agent/clear_ip>.
 
 =cut
 
-sub clear_ip($$) {
+sub clear_ip($$$$) {
 	my $if = shift;
 	my $ip = shift;
-	return _execute('clear_ip', "$if $ip");
+	my $cidr = shift;
+	my $dg = shift;
+	
+	return _execute('clear_ip', "$if $ip/$cidr $dg");
 }
 
 
